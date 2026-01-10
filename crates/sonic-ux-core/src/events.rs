@@ -178,6 +178,11 @@ impl EventGenerator {
         self.time_since_event > self.min_event_interval
             && self.rng.f32() < self.event_density
     }
+
+    /// Get time since last event (for diagnostics).
+    pub fn time_since_event(&self) -> u64 {
+        self.time_since_event
+    }
 }
 
 #[cfg(test)]

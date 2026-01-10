@@ -81,21 +81,31 @@ pub struct OutputFrame {
     pub harmony: HarmonyState,
     /// Discrete musical events triggered this frame
     pub events: Vec<MusicEvent>,
+    /// Optional diagnostic output for debugging/visualization
+    pub diagnostics: Option<DiagnosticOutput>,
 }
 
 /// Continuous musical parameters (all 0..1 unless noted).
+///
+/// These are smoothed, bounded values suitable for direct mapping to audio parameters.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct MusicParams {
-    /// Filter cutoff frequency
-    pub cutoff: f32,
-    /// Tonal warmth/brightness
+    /// Overall intensity / master level
+    pub master: f32,
+    /// Harmonic richness / tonal warmth
     pub warmth: f32,
-    /// Stereo width
-    pub stereo_width: f32,
-    /// Reverb send amount
+    /// Filter cutoff proxy (higher = brighter)
+    pub brightness: f32,
+    /// Stereo spread / width
+    pub width: f32,
+    /// Modulation depth / movement amount
+    pub motion: f32,
+    /// Spatial depth / reverb send
     pub reverb: f32,
-    /// Overall activity level
-    pub activity: f32,
+    /// Voice or note activity level
+    pub density: f32,
+    /// Harmonic complexity / tension level
+    pub tension: f32,
 }
 
 /// Current harmonic state.
@@ -214,12 +224,24 @@ impl MusicEvent {
 }
 
 /// Diagnostic output for debugging and visualization.
+///
+/// Intended for debugging, visualization, or educational overlays.
 #[derive(Debug, Clone, Default)]
 pub struct DiagnosticOutput {
-    /// Raw (unsmoothed) parameter values
+    /// Current key (0-11, where 0 = C)
+    pub key: u8,
+    /// Current mode as numeric value
+    pub mode: u8,
+    /// Current chord degree (0-6 for I-VII)
+    pub chord: u8,
+    /// Raw (unsmoothed) activity value
     pub raw_activity: f32,
-    /// Current smoothing coefficients
-    pub smoothing_alpha: f32,
+    /// Current smoothing attack coefficient
+    pub smoothing_attack: f32,
+    /// Current smoothing release coefficient
+    pub smoothing_release: f32,
     /// Pending modulation target (if any)
     pub pending_modulation: Option<(u8, Mode)>,
+    /// Time since last event (ms)
+    pub time_since_event: u64,
 }

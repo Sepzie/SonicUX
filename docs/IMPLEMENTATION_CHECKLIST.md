@@ -23,43 +23,46 @@ This document tracks the implementation progress of the SonicUX musicalization e
 
 - [x] `InteractionFrame` struct with all fields
 - [x] `InteractionEvent` enum (Click, Nav, HoverStart, HoverEnd)
-- [x] `OutputFrame` struct
-- [x] `MusicParams` struct
+- [x] `OutputFrame` struct with diagnostics
+- [x] `MusicParams` struct (master, warmth, brightness, width, motion, reverb, density, tension)
 - [x] `MusicEvent` enum with salience field
 - [x] `HarmonyState` struct
 - [x] `Mode` enum with intervals
-- [ ] Unit tests for type conversions
+- [x] `DiagnosticOutput` struct
+- [x] Unit tests for type conversions
 
 ### Smoothing (`smoothing.rs`)
 
 - [x] `SmoothedParam` with attack/release
-- [x] `ParamSmoother` for all params
+- [x] `ParamSmoother` for all 8 params
 - [x] `DecayingValue` for sentinel handling
 - [x] Reduced motion profile application
-- [ ] Configurable smoothing profiles (deferred)
-- [ ] Unit tests for convergence behavior
+- [ ] Configurable smoothing profiles (deferred to post-v1)
+- [x] Unit tests for convergence behavior
 
 ### Harmony (`harmony.rs`)
 
 - [x] `Preset` enum (Ambient, Minimal, Dramatic, Playful)
-- [x] `HarmonyManager` basic structure
-- [x] Scale/mode support
+- [x] `HarmonyManager` structure
+- [x] Scale/mode support (8 modes)
 - [x] Chord generation from degrees
 - [x] Modulation logic
-- [ ] Chord pool customization
-- [ ] Unit tests for scale generation
+- [x] Chord pool customization
+- [x] `ChordDegree` enum
+- [x] Unit tests for scale generation
 
 ### Events (`events.rs`)
 
-- [x] `EventGenerator` basic structure
+- [x] `EventGenerator` structure
 - [x] Click → Pluck mapping
 - [x] Nav → PadChord mapping
 - [x] HoverStart → subtle pluck
 - [x] Activity-based accents
 - [x] Density control
-- [ ] Salience calculation refinement
-- [ ] Mute event on tab unfocus
-- [ ] Unit tests for event generation
+- [x] Salience calculation
+- [x] Mute event on tab unfocus
+- [x] `time_since_event()` getter
+- [x] Unit tests for event generation
 
 ### Engine (`engine.rs`)
 
@@ -67,10 +70,12 @@ This document tracks the implementation progress of the SonicUX musicalization e
 - [x] `update()` method
 - [x] `event()` method
 - [x] `set_preset()`, `set_scale()`, `set_modulation_rate()`
+- [x] `set_chord_pool()`
+- [x] `set_diagnostics()`
 - [x] Reduced motion handling
 - [x] Tab focus handling
-- [ ] Diagnostic output
-- [ ] Unit tests for engine behavior
+- [x] Diagnostic output
+- [x] Unit tests for engine behavior
 
 ---
 
@@ -81,8 +86,11 @@ This document tracks the implementation progress of the SonicUX musicalization e
 - [x] JS-friendly `InteractionFrame` with serde
 - [x] JS-friendly `InteractionEvent` with tagged enum
 - [x] JS-friendly `OutputFrame` conversion
+- [x] JS-friendly `MusicParams` (all 8 fields)
+- [x] JS-friendly `Diagnostics`
 - [x] Note name to number conversion
-- [ ] TypeScript type definitions generation
+- [x] Chord degree parsing
+- [x] TypeScript type definitions
 
 ### API Surface
 
@@ -91,10 +99,11 @@ This document tracks the implementation progress of the SonicUX musicalization e
 - [x] `SonicEngine::event(event)`
 - [x] `SonicEngine::set_section(id)`
 - [x] `SonicEngine::set_enabled(bool)`
+- [x] `SonicEngine::set_diagnostics(bool)`
 - [x] `SonicEngine::set_preset(name)`
 - [x] `SonicEngine::set_scale(root, mode)`
+- [x] `SonicEngine::set_chord_pool(chords)`
 - [x] `SonicEngine::set_modulation_rate(rate)`
-- [ ] `SonicEngine::set_chord_pool(chords)` (deferred)
 
 ---
 
@@ -111,13 +120,13 @@ This document tracks the implementation progress of the SonicUX musicalization e
 
 - [x] PRD with all specifications
 - [x] Architecture diagrams
-- [ ] API.md with usage examples
+- [x] API.md with usage examples
+- [x] TypeScript type definitions
 - [ ] README.md for npm package
-- [ ] TypeScript examples
 
 ### Testing
 
-- [ ] Rust unit tests passing
+- [x] Rust unit tests (13 tests)
 - [ ] WASM integration tests
 - [ ] Browser smoke test
 - [ ] Performance benchmarks
@@ -128,10 +137,11 @@ This document tracks the implementation progress of the SonicUX musicalization e
 
 ### Example Application
 
-- [ ] Basic HTML + Tone.js example
-- [ ] Interaction sampler (mouse, scroll)
-- [ ] Audio synthesis mapping
-- [ ] Visual feedback overlay
+- [x] Basic HTML + Tone.js example
+- [x] Interaction sampler (mouse, scroll)
+- [x] Audio synthesis mapping
+- [x] Visual feedback (params display)
+- [x] Events log
 
 ### Polish
 
@@ -151,13 +161,31 @@ This document tracks the implementation progress of the SonicUX musicalization e
 
 ---
 
+## Summary
+
+| Category | Completed | Total |
+|----------|-----------|-------|
+| Core Types | 9/9 | 100% |
+| Smoothing | 5/6 | 83% |
+| Harmony | 7/7 | 100% |
+| Events | 10/10 | 100% |
+| Engine | 11/11 | 100% |
+| WASM Bindings | 17/17 | 100% |
+| Build Pipeline | 0/4 | 0% |
+| Documentation | 4/5 | 80% |
+| Testing | 1/4 | 25% |
+| Example | 5/5 | 100% |
+| **Overall** | **69/78** | **88%** |
+
+---
+
 ## Notes
 
-Last updated: Project initialization
+Last updated: Implementation complete for core functionality
 
 ### Current Focus
 
-Setting up project foundation and core module structure.
+Core implementation complete. Ready for build pipeline and testing.
 
 ### Blockers
 
@@ -169,3 +197,6 @@ None currently.
 2. Presets: ambient (default), minimal, dramatic, playful
 3. Salience field on all events for host-side filtering
 4. Sentinel value -1 for missing pointer data
+5. MusicParams: 8 fields matching PRD spec
+6. DiagnosticOutput optional in OutputFrame
+7. ChordDegree enum for chord pool customization

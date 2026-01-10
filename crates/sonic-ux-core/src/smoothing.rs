@@ -85,34 +85,63 @@ impl Default for SmoothedParam {
 }
 
 /// Smoother for all musical parameters.
+///
+/// Matches the fields in MusicParams from the PRD.
 #[derive(Debug, Default)]
 pub struct ParamSmoother {
-    pub cutoff: SmoothedParam,
+    /// Overall intensity / master level
+    pub master: SmoothedParam,
+    /// Harmonic richness / tonal warmth
     pub warmth: SmoothedParam,
-    pub stereo_width: SmoothedParam,
+    /// Filter cutoff proxy (higher = brighter)
+    pub brightness: SmoothedParam,
+    /// Stereo spread / width
+    pub width: SmoothedParam,
+    /// Modulation depth / movement amount
+    pub motion: SmoothedParam,
+    /// Spatial depth / reverb send
     pub reverb: SmoothedParam,
-    pub activity: SmoothedParam,
+    /// Voice or note activity level
+    pub density: SmoothedParam,
+    /// Harmonic complexity / tension level
+    pub tension: SmoothedParam,
 }
 
 impl ParamSmoother {
     /// Create a new param smoother with default values.
     pub fn new() -> Self {
         Self {
-            cutoff: SmoothedParam::new(0.5),
+            master: SmoothedParam::new(0.5),
             warmth: SmoothedParam::new(0.5),
-            stereo_width: SmoothedParam::new(0.3),
+            brightness: SmoothedParam::new(0.5),
+            width: SmoothedParam::new(0.3),
+            motion: SmoothedParam::new(0.3),
             reverb: SmoothedParam::new(0.4),
-            activity: SmoothedParam::new(0.0),
+            density: SmoothedParam::new(0.0),
+            tension: SmoothedParam::new(0.3),
         }
     }
 
     /// Update all smoothed parameters.
     pub fn update(&mut self) {
-        self.cutoff.update();
+        self.master.update();
         self.warmth.update();
-        self.stereo_width.update();
+        self.brightness.update();
+        self.width.update();
+        self.motion.update();
         self.reverb.update();
-        self.activity.update();
+        self.density.update();
+        self.tension.update();
+    }
+
+    /// Get current attack coefficient (from master param).
+    pub fn attack(&self) -> f32 {
+        self.master.attack
+    }
+
+    /// Get current release coefficient (from master param).
+    pub fn release(&self) -> f32 {
+        self.master.release
     }
 
     /// Apply reduced motion profile - increases smoothing times.
@@ -120,16 +149,7 @@ impl ParamSmoother {
         let slow_attack = 0.02;
         let slow_release = 0.01;
 
-        self.cutoff.set_attack(slow_attack);
-        self.cutoff.set_release(slow_release);
-        self.warmth.set_attack(slow_attack);
-        self.warmth.set_release(slow_release);
-        self.stereo_width.set_attack(slow_attack);
-        self.stereo_width.set_release(slow_release);
-        self.reverb.set_attack(slow_attack);
-        self.reverb.set_release(slow_release);
-        self.activity.set_attack(slow_attack);
-        self.activity.set_release(slow_release);
+        self.apply_coefficients(slow_attack, slow_release);
     }
 
     /// Apply normal smoothing profile.
@@ -137,16 +157,27 @@ impl ParamSmoother {
         let normal_attack = 0.05;
         let normal_release = 0.02;
 
-        self.cutoff.set_attack(normal_attack);
-        self.cutoff.set_release(normal_release);
-        self.warmth.set_attack(normal_attack);
-        self.warmth.set_release(normal_release);
-        self.stereo_width.set_attack(normal_attack);
-        self.stereo_width.set_release(normal_release);
-        self.reverb.set_attack(normal_attack);
-        self.reverb.set_release(normal_release);
-        self.activity.set_attack(normal_attack);
-        self.activity.set_release(normal_release);
+        self.apply_coefficients(normal_attack, normal_release);
+    }
+
+    /// Apply custom coefficients to all parameters.
+    fn apply_coefficients(&mut self, attack: f32, release: f32) {
+        self.master.set_attack(attack);
+        self.master.set_release(release);
+        self.warmth.set_attack(attack);
+        self.warmth.set_release(release);
+        self.brightness.set_attack(attack);
+        self.brightness.set_release(release);
+        self.width.set_attack(attack);
+        self.width.set_release(release);
+        self.motion.set_attack(attack);
+        self.motion.set_release(release);
+        self.reverb.set_attack(attack);
+        self.reverb.set_release(release);
+        self.density.set_attack(attack);
+        self.density.set_release(release);
+        self.tension.set_attack(attack);
+        self.tension.set_release(release);
     }
 }
 

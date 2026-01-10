@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SonicUX Basic Example</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: #eee;
+      min-height: 300vh;
+      overflow-x: hidden;
+    }
+
+    .hero {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 2rem;
+    }
+
+    h1 {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      background: linear-gradient(90deg, #e94560, #0f3460);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      font-size: 1.2rem;
+      color: #888;
+      margin-bottom: 2rem;
+    }
+
+    .start-btn {
+      padding: 1rem 2rem;
+      font-size: 1.1rem;
+      background: #e94560;
+      color: white;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .start-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 10px 30px rgba(233, 69, 96, 0.3);
+    }
+
+    .start-btn:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
+
+    section {
+      min-height: 100vh;
+      padding: 4rem 2rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    section:nth-child(2) { background: rgba(233, 69, 96, 0.1); }
+    section:nth-child(3) { background: rgba(15, 52, 96, 0.2); }
+
+    .interactive-area {
+      width: 300px;
+      height: 300px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .interactive-area:hover {
+      border-color: #e94560;
+      transform: scale(1.02);
+    }
+
+    .params-display {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 1rem;
+      border-radius: 10px;
+      font-family: monospace;
+      font-size: 0.8rem;
+      min-width: 200px;
+    }
+
+    .param-bar {
+      height: 4px;
+      background: #333;
+      border-radius: 2px;
+      margin: 4px 0 8px 0;
+      overflow: hidden;
+    }
+
+    .param-bar-fill {
+      height: 100%;
+      background: #e94560;
+      transition: width 0.1s;
+    }
+
+    .events-log {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 1rem;
+      border-radius: 10px;
+      font-family: monospace;
+      font-size: 0.75rem;
+      max-width: 300px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .event-item {
+      padding: 2px 0;
+      opacity: 1;
+      transition: opacity 0.5s;
+    }
+
+    .event-item.fading {
+      opacity: 0.3;
+    }
+  </style>
+</head>
+<body>
+  <section class="hero">
+    <h1>SonicUX Demo</h1>
+    <p class="subtitle">Move your mouse, scroll, and click to create music</p>
+    <button class="start-btn" id="startBtn">Click to Start Audio</button>
+  </section>
+
+  <section>
+    <h2>Section 1</h2>
+    <div class="interactive-area" data-hover-id="1">
+      <span>Hover & Click Me</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>Section 2</h2>
+    <div class="interactive-area" data-hover-id="2">
+      <span>Hover & Click Me</span>
+    </div>
+  </section>
+
+  <div class="params-display" id="paramsDisplay">
+    <div>master: <span id="paramMaster">0.00</span></div>
+    <div class="param-bar"><div class="param-bar-fill" id="barMaster"></div></div>
+
+    <div>brightness: <span id="paramBrightness">0.00</span></div>
+    <div class="param-bar"><div class="param-bar-fill" id="barBrightness"></div></div>
+
+    <div>warmth: <span id="paramWarmth">0.00</span></div>
+    <div class="param-bar"><div class="param-bar-fill" id="barWarmth"></div></div>
+
+    <div>reverb: <span id="paramReverb">0.00</span></div>
+    <div class="param-bar"><div class="param-bar-fill" id="barReverb"></div></div>
+
+    <div>tension: <span id="paramTension">0.00</span></div>
+    <div class="param-bar"><div class="param-bar-fill" id="barTension"></div></div>
+  </div>
+
+  <div class="events-log" id="eventsLog">
+    <strong>Events:</strong>
+  </div>
+
+  <!-- Tone.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+
+  <!-- Main script -->
+  <script type="module" src="main.js"></script>
+</body>
+</html>

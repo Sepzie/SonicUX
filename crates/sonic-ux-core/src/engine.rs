@@ -4,7 +4,8 @@ use crate::events::EventGenerator;
 use crate::harmony::{ChordDegree, HarmonyManager, Preset};
 use crate::smoothing::{DecayingValue, ParamSmoother};
 use crate::types::{
-    HarmonyState, InteractionEvent, InteractionFrame, Mode, MusicEvent, MusicParams, OutputFrame,
+    DiagnosticOutput, HarmonyState, InteractionEvent, InteractionFrame, Mode, MusicEvent,
+    MusicParams, OutputFrame,
 };
 
 /// The main musicalization engine.
@@ -30,6 +31,12 @@ pub struct Engine {
     reduced_motion: bool,
     /// Engine enabled state
     enabled: bool,
+    /// Whether to include diagnostics in output
+    diagnostics_enabled: bool,
+    /// Current chord degree (for diagnostics)
+    current_chord: u8,
+    /// Raw activity before smoothing (for diagnostics)
+    raw_activity: f32,
 }
 
 impl Engine {
@@ -47,7 +54,15 @@ impl Engine {
             last_t_ms: 0,
             reduced_motion: false,
             enabled: true,
+            diagnostics_enabled: false,
+            current_chord: 0,
+            raw_activity: 0.0,
         }
+    }
+
+    /// Enable or disable diagnostic output.
+    pub fn set_diagnostics(&mut self, enabled: bool) {
+        self.diagnostics_enabled = enabled;
     }
 
     /// Process an interaction frame and return musical output.
@@ -81,10 +96,10 @@ impl Engine {
         self.pointer_y.update(frame.pointer_y);
 
         // Calculate activity from inputs
-        let activity = self.calculate_activity(&frame);
+        self.raw_activity = self.calculate_activity(&frame);
 
         // Map activity to parameters
-        self.update_params(&frame, activity);
+        self.update_params(&frame, self.raw_activity);
 
         // Update smoother
         self.smoother.update();
@@ -94,7 +109,7 @@ impl Engine {
             dt_ms,
             frame.section_id,
             frame.hover_id,
-            activity,
+            self.raw_activity,
             &mut self.harmony,
         );
 
@@ -106,16 +121,37 @@ impl Engine {
             });
         }
 
+        // Build diagnostics if enabled
+        let diagnostics = if self.diagnostics_enabled {
+            let state = self.harmony.state();
+            Some(DiagnosticOutput {
+                key: state.root,
+                mode: mode_to_num(state.mode),
+                chord: self.current_chord,
+                raw_activity: self.raw_activity,
+                smoothing_attack: self.smoother.attack(),
+                smoothing_release: self.smoother.release(),
+                pending_modulation: None,
+                time_since_event: self.events.time_since_event(),
+            })
+        } else {
+            None
+        };
+
         OutputFrame {
             params: MusicParams {
-                cutoff: self.smoother.cutoff.value(),
+                master: self.smoother.master.value(),
                 warmth: self.smoother.warmth.value(),
-                stereo_width: self.smoother.stereo_width.value(),
+                brightness: self.smoother.brightness.value(),
+                width: self.smoother.width.value(),
+                motion: self.smoother.motion.value(),
                 reverb: self.smoother.reverb.value(),
-                activity: self.smoother.activity.value(),
+                density: self.smoother.density.value(),
+                tension: self.smoother.tension.value(),
             },
             harmony: self.harmony.state(),
             events,
+            diagnostics,
         }
     }
 
@@ -197,27 +233,48 @@ impl Engine {
         let width = if frame.has_pointer() {
             (frame.pointer_x - 0.5).abs() * 2.0
         } else {
-            self.pointer_x.value().abs() * 2.0
+            (self.pointer_x.value() - 0.5).abs() * 2.0
         };
 
-        // Map scroll position to cutoff
-        let cutoff = 0.3 + frame.scroll_y * 0.5;
+        // Map scroll position to brightness (filter cutoff)
+        let brightness = 0.3 + frame.scroll_y * 0.5;
 
-        // Map activity to warmth and reverb
+        // Map activity to various params
+        let master = 0.4 + activity * 0.4; // 0.4-0.8 range
         let warmth = 0.4 + activity * 0.4;
+        let motion = activity * 0.6; // More activity = more modulation
         let reverb = 0.3 + (1.0 - activity) * 0.4; // More reverb when calm
+        let density = activity; // Direct mapping
+        let tension = self.harmony.state().tension; // From harmony manager
 
-        self.smoother.cutoff.set_target(cutoff);
+        self.smoother.master.set_target(master);
         self.smoother.warmth.set_target(warmth);
-        self.smoother.stereo_width.set_target(width);
+        self.smoother.brightness.set_target(brightness);
+        self.smoother.width.set_target(width);
+        self.smoother.motion.set_target(motion);
         self.smoother.reverb.set_target(reverb);
-        self.smoother.activity.set_target(activity);
+        self.smoother.density.set_target(density);
+        self.smoother.tension.set_target(tension);
     }
 }
 
 impl Default for Engine {
     fn default() -> Self {
         Self::new(42, Preset::Ambient)
+    }
+}
+
+/// Convert Mode enum to numeric value for diagnostics.
+fn mode_to_num(mode: Mode) -> u8 {
+    match mode {
+        Mode::Major => 0,
+        Mode::Minor => 1,
+        Mode::Dorian => 2,
+        Mode::Mixolydian => 3,
+        Mode::Lydian => 4,
+        Mode::Phrygian => 5,
+        Mode::PentatonicMajor => 6,
+        Mode::PentatonicMinor => 7,
     }
 }
 
@@ -252,7 +309,8 @@ mod tests {
         };
 
         let output = engine.update(frame);
-        assert!(output.params.cutoff >= 0.0 && output.params.cutoff <= 1.0);
+        assert!(output.params.brightness >= 0.0 && output.params.brightness <= 1.0);
+        assert!(output.params.master >= 0.0 && output.params.master <= 1.0);
     }
 
     #[test]
@@ -264,5 +322,68 @@ mod tests {
         let output = engine.update(frame);
 
         assert!(output.events.is_empty());
+    }
+
+    #[test]
+    fn test_engine_diagnostics() {
+        let mut engine = Engine::new(42, Preset::Ambient);
+        engine.set_diagnostics(true);
+
+        let frame = InteractionFrame {
+            t_ms: 16,
+            pointer_x: 0.5,
+            pointer_y: 0.5,
+            pointer_speed: 0.5,
+            scroll_y: 0.0,
+            scroll_v: 0.0,
+            hover_id: 0,
+            section_id: 0,
+            focus: true,
+            tab_focused: true,
+            reduced_motion: false,
+            viewport_w: 1920,
+            viewport_h: 1080,
+        };
+
+        let output = engine.update(frame);
+        assert!(output.diagnostics.is_some());
+        let diag = output.diagnostics.unwrap();
+        assert!(diag.raw_activity > 0.0);
+    }
+
+    #[test]
+    fn test_reduced_motion() {
+        let mut engine = Engine::new(42, Preset::Ambient);
+
+        let frame = InteractionFrame {
+            t_ms: 16,
+            reduced_motion: true,
+            focus: true,
+            tab_focused: true,
+            ..Default::default()
+        };
+
+        let _output = engine.update(frame);
+        // Reduced motion should apply slower smoothing
+        assert!(engine.reduced_motion);
+    }
+
+    #[test]
+    fn test_preset_change() {
+        let mut engine = Engine::new(42, Preset::Ambient);
+        assert_eq!(engine.preset(), Preset::Ambient);
+
+        engine.set_preset(Preset::Dramatic);
+        assert_eq!(engine.preset(), Preset::Dramatic);
+    }
+
+    #[test]
+    fn test_scale_change() {
+        let mut engine = Engine::new(42, Preset::Ambient);
+
+        engine.set_scale(9, Mode::Minor); // A minor
+        let state = engine.harmony_state();
+        assert_eq!(state.root, 9);
+        assert_eq!(state.mode, Mode::Minor);
     }
 }

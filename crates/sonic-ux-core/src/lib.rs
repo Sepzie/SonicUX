@@ -45,7 +45,7 @@
 
 mod types;
 mod engine;
-mod harmony;
+pub mod harmony;
 mod smoothing;
 mod events;
 
