@@ -1,0 +1,13 @@
+[package]
+name = "sonic-ux-core"
+description = "Core musicalization engine - transforms UI interactions into musical parameters"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# Fast, portable random number generation
+fastrand = "2.0"
+
+[dev-dependencies]
