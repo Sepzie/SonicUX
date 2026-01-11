@@ -4,8 +4,8 @@ use crate::events::EventGenerator;
 use crate::harmony::{ChordDegree, HarmonyManager, Preset};
 use crate::smoothing::{DecayingValue, ParamSmoother};
 use crate::types::{
-    DiagnosticOutput, HarmonyState, InteractionEvent, InteractionFrame, Mode, MusicEvent,
-    MusicParams, OutputFrame,
+    DiagnosticOutput, HarmonyState, HoldState, InteractionEvent, InteractionFrame, Mode,
+    MusicEvent, MusicParams, OutputFrame,
 };
 
 /// The main musicalization engine.
@@ -37,6 +37,10 @@ pub struct Engine {
     current_chord: u8,
     /// Raw activity before smoothing (for diagnostics)
     raw_activity: f32,
+    /// Decaying click energy for tension mapping
+    click_energy: f32,
+    /// Current hold note (for click-and-hold)
+    hold_note: Option<u8>,
 }
 
 impl Engine {
@@ -57,6 +61,8 @@ impl Engine {
             diagnostics_enabled: false,
             current_chord: 0,
             raw_activity: 0.0,
+            click_energy: 0.0,
+            hold_note: None,
         }
     }
 
@@ -78,6 +84,7 @@ impl Engine {
             frame.t_ms.saturating_sub(self.last_t_ms)
         };
         self.last_t_ms = frame.t_ms;
+        self.decay_click_energy(dt_ms);
 
         // Handle reduced motion changes
         if frame.reduced_motion != self.reduced_motion {
@@ -121,6 +128,8 @@ impl Engine {
             });
         }
 
+        let hold = self.compute_hold(&frame);
+
         // Build diagnostics if enabled
         let diagnostics = if self.diagnostics_enabled {
             let state = self.harmony.state();
@@ -151,6 +160,7 @@ impl Engine {
             },
             harmony: self.harmony.state(),
             events,
+            hold,
             diagnostics,
         }
     }
@@ -159,6 +169,11 @@ impl Engine {
     pub fn event(&mut self, event: InteractionEvent) -> Vec<MusicEvent> {
         if !self.enabled {
             return Vec::new();
+        }
+        if let InteractionEvent::Click { y, weight, .. } = event {
+            let weight = weight.unwrap_or(1.0).clamp(0.0, 1.0);
+            let intensity = (0.6 + weight * 0.4 + y * 0.1).clamp(0.0, 1.0);
+            self.click_energy = self.click_energy.max(intensity);
         }
         self.events.process_event(&event, &self.harmony)
     }
@@ -227,6 +242,36 @@ impl Engine {
         (raw * focus_mult).clamp(0.0, 1.0)
     }
 
+    fn decay_click_energy(&mut self, dt_ms: u64) {
+        let decay = (-(dt_ms as f32) / 450.0).exp();
+        self.click_energy *= decay;
+    }
+
+    fn compute_hold(&mut self, frame: &InteractionFrame) -> Option<HoldState> {
+        if !frame.pointer_down {
+            self.hold_note = None;
+            return None;
+        }
+
+        let pointer_x = if frame.has_pointer() {
+            frame.pointer_x
+        } else {
+            self.pointer_x.value()
+        };
+        let pointer_y = if frame.has_pointer() {
+            frame.pointer_y
+        } else {
+            self.pointer_y.value()
+        };
+        let degree_count = self.harmony.state().mode.intervals().len().max(1);
+        let degree = ((pointer_x.clamp(0.0, 0.9999)) * degree_count as f32) as usize;
+        let note = self.harmony.scale_note(degree, 4);
+        self.hold_note = Some(note);
+
+        let velocity = (0.35 + pointer_y.clamp(0.0, 1.0) * 0.65).clamp(0.2, 1.0);
+        Some(HoldState { note, velocity })
+    }
+
     /// Update parameter targets based on input.
     fn update_params(&mut self, frame: &InteractionFrame, activity: f32) {
         // Map pointer position to stereo width
@@ -236,16 +281,28 @@ impl Engine {
             (self.pointer_x.value() - 0.5).abs() * 2.0
         };
 
-        // Map scroll position to brightness (filter cutoff)
-        let brightness = 0.3 + frame.scroll_y * 0.5;
+        // Map pointer position to brightness
+        let pointer_y = if frame.has_pointer() {
+            frame.pointer_y
+        } else {
+            self.pointer_y.value()
+        };
+        let brightness = pointer_y.clamp(0.0, 1.0);
 
         // Map activity to various params
-        let master = 0.4 + activity * 0.4; // 0.4-0.8 range
-        let warmth = 0.4 + activity * 0.4;
+        let master = 0.55 + activity * 0.45; // 0.55-1.0 range
+        let hover_boost = if frame.hover_id > 0 { 0.2 } else { 0.0 };
+        let warmth = (0.3 + frame.pointer_speed * 0.5 + hover_boost).clamp(0.0, 1.0);
         let motion = activity * 0.6; // More activity = more modulation
-        let reverb = 0.3 + (1.0 - activity) * 0.4; // More reverb when calm
+        let scroll_energy = frame.scroll_v.abs().clamp(0.0, 1.0);
+        let reduced_boost = if frame.reduced_motion { 0.2 } else { 0.0 };
+        let reverb = (0.2 + scroll_energy * 0.6 + reduced_boost).clamp(0.0, 1.0);
         let density = activity; // Direct mapping
-        let tension = self.harmony.state().tension; // From harmony manager
+        let scroll_spike = ((scroll_energy - 0.4) / 0.6).clamp(0.0, 1.0);
+        let tension = (self.harmony.state().tension * 0.35
+            + scroll_spike * 0.35
+            + self.click_energy * 0.4)
+            .clamp(0.0, 1.0);
 
         self.smoother.master.set_target(master);
         self.smoother.warmth.set_target(warmth);
@@ -297,6 +354,7 @@ mod tests {
             pointer_x: 0.5,
             pointer_y: 0.5,
             pointer_speed: 0.1,
+            pointer_down: false,
             scroll_y: 0.0,
             scroll_v: 0.0,
             hover_id: 0,
@@ -334,6 +392,7 @@ mod tests {
             pointer_x: 0.5,
             pointer_y: 0.5,
             pointer_speed: 0.5,
+            pointer_down: false,
             scroll_y: 0.0,
             scroll_v: 0.0,
             hover_id: 0,
@@ -358,6 +417,7 @@ mod tests {
         let frame = InteractionFrame {
             t_ms: 16,
             reduced_motion: true,
+            pointer_down: false,
             focus: true,
             tab_focused: true,
             ..Default::default()

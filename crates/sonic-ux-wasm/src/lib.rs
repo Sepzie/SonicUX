@@ -21,6 +21,7 @@ pub struct InteractionFrame {
     pub pointer_x: f32,
     pub pointer_y: f32,
     pub pointer_speed: f32,
+    pub pointer_down: u8,
     pub scroll_y: f32,
     pub scroll_v: f32,
     pub hover_id: u32,
@@ -39,6 +40,7 @@ impl From<InteractionFrame> for CoreInteractionFrame {
             pointer_x: f.pointer_x,
             pointer_y: f.pointer_y,
             pointer_speed: f.pointer_speed,
+            pointer_down: f.pointer_down != 0,
             scroll_y: f.scroll_y,
             scroll_v: f.scroll_v,
             hover_id: f.hover_id,
@@ -117,6 +119,8 @@ pub struct JsOutputFrame {
     pub harmony: JsHarmonyState,
     pub events: Vec<JsMusicEvent>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub hold: Option<JsHoldState>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub diagnostics: Option<JsDiagnostics>,
 }
 
@@ -148,6 +152,13 @@ pub struct JsHarmonyState {
     pub root: u8,
     pub mode: String,
     pub tension: f32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JsHoldState {
+    pub note: u8,
+    pub vel: f32,
 }
 
 /// Diagnostic output for debugging/visualization.
@@ -221,6 +232,10 @@ fn convert_output(output: CoreOutputFrame) -> JsOutputFrame {
             tension: output.harmony.tension,
         },
         events: output.events.into_iter().map(convert_event).collect(),
+        hold: output.hold.map(|hold| JsHoldState {
+            note: hold.note,
+            vel: hold.velocity,
+        }),
         diagnostics: output.diagnostics.map(|d| JsDiagnostics {
             key: d.key,
             mode: d.mode,

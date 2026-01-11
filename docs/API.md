@@ -23,6 +23,7 @@ function tick() {
     pointerX: mouseX / window.innerWidth,
     pointerY: mouseY / window.innerHeight,
     pointerSpeed: calculateSpeed(),
+    pointerDown: mouseDown ? 1 : 0,
     scrollY: window.scrollY / maxScroll,
     scrollV: scrollVelocity,
     hoverId: currentHoverId,
@@ -157,6 +158,7 @@ interface InteractionFrame {
   pointerX: number;      // Pointer X (0..1), or -1 for "no pointer"
   pointerY: number;      // Pointer Y (0..1), or -1 for "no pointer"
   pointerSpeed: number;  // Pointer speed (0..1)
+  pointerDown: 0 | 1;    // Pointer button held down
   scrollY: number;       // Scroll Y position (0..1)
   scrollV: number;       // Scroll velocity (-1..1)
   hoverId: number;       // Opaque hover element ID (0 = none)
@@ -202,6 +204,7 @@ interface OutputFrame {
   params: MusicParams;
   harmony: HarmonyState;
   events: MusicEvent[];
+  hold?: HoldState;
   diagnostics?: Diagnostics;  // Only if enabled
 }
 ```
@@ -233,6 +236,17 @@ interface HarmonyState {
   mode: string;     // Mode name
   tension: number;  // Current tension level (0..1)
 }
+
+### HoldState
+
+Continuous hold output when the pointer button is down.
+
+```typescript
+interface HoldState {
+  note: number;     // MIDI note number
+  vel: number;      // Velocity (0..1)
+}
+```
 ```
 
 ### MusicEvent

@@ -23,6 +23,8 @@ export interface InteractionFrame {
   pointerY: number;
   /** Pointer speed (0..1) */
   pointerSpeed: number;
+  /** Pointer button held down (0 or 1) */
+  pointerDown: 0 | 1;
 
   /** Scroll Y position (0..1) */
   scrollY: number;
@@ -79,6 +81,8 @@ export interface OutputFrame {
   harmony: HarmonyState;
   /** Discrete musical events triggered this frame */
   events: MusicEvent[];
+  /** Optional continuous hold output (if pointer is down) */
+  hold?: HoldState;
   /** Optional diagnostic output (if enabled) */
   diagnostics?: Diagnostics;
 }
@@ -115,6 +119,16 @@ export interface HarmonyState {
   mode: Mode;
   /** Harmonic tension level (0..1) */
   tension: number;
+}
+
+/**
+ * Continuous hold output for click-and-hold interactions.
+ */
+export interface HoldState {
+  /** MIDI note number */
+  note: number;
+  /** Velocity (0..1) */
+  vel: number;
 }
 
 /**

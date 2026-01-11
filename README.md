@@ -38,6 +38,7 @@ const output = engine.update({
   pointerX: mouseX / window.innerWidth,
   pointerY: mouseY / window.innerHeight,
   pointerSpeed: speed,
+  pointerDown: mouseDown ? 1 : 0,
   scrollY: scrollY / maxScroll,
   scrollV: scrollVelocity,
   hoverId: 0,

@@ -28,6 +28,7 @@
 //!     pointer_x: 0.5,
 //!     pointer_y: 0.5,
 //!     pointer_speed: 0.0,
+//!     pointer_down: false,
 //!     scroll_y: 0.0,
 //!     scroll_v: 0.0,
 //!     hover_id: 0,

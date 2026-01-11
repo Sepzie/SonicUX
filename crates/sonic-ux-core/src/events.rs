@@ -64,16 +64,21 @@ impl EventGenerator {
         let mut events = Vec::new();
 
         match event {
-            InteractionEvent::Click { x, y, .. } => {
+            InteractionEvent::Click { x, y, weight, .. } => {
+                let x = x.clamp(0.0, 1.0);
+                let y = y.clamp(0.0, 1.0);
+                let weight = weight.unwrap_or(1.0).clamp(0.0, 1.0);
                 // Generate pluck based on position
-                let velocity = 0.5 + (1.0 - *y) * 0.3; // Higher = louder
-                let octave = 3 + ((*y * 2.0) as u8).min(2);
-                let degree = ((*x * 5.0) as usize).min(4);
+                let velocity =
+                    ((0.55 + y * 0.45) * (0.7 + weight * 0.3)).clamp(0.35, 1.0);
+                let octave = 4;
+                let degree = ((x * 5.0) as usize).min(4);
                 let note = harmony.scale_note(degree, octave);
 
                 // Salience based on velocity and position (center = more salient)
-                let center_dist = ((*x - 0.5).abs() + (*y - 0.5).abs()) / 2.0;
-                let salience = (1.0 - center_dist) * velocity;
+                let center_dist = ((x - 0.5).abs() + (y - 0.5).abs()) / 2.0;
+                let salience =
+                    ((0.7 + velocity * 0.3) * (1.0 - center_dist * 0.35)).clamp(0.0, 1.0);
 
                 events.push(MusicEvent::Pluck {
                     note,
@@ -82,7 +87,11 @@ impl EventGenerator {
                 });
             }
 
-            InteractionEvent::Nav { section_id, .. } => {
+            InteractionEvent::Nav {
+                section_id,
+                weight,
+            } => {
+                let weight = weight.unwrap_or(1.0).clamp(0.0, 1.0);
                 // Section change triggers chord
                 let degree = match section_id % 4 {
                     0 => ChordDegree::I,
@@ -91,22 +100,30 @@ impl EventGenerator {
                     _ => ChordDegree::VI,
                 };
 
-                let notes = harmony.chord_notes(degree, 3);
+                let notes = harmony.chord_notes(degree, 4);
                 events.push(MusicEvent::PadChord {
                     notes,
-                    velocity: 0.4,
-                    salience: 0.8, // Navigation is high salience
+                    velocity: (0.65 + weight * 0.35).clamp(0.2, 1.0),
+                    salience: (0.85 + weight * 0.15).clamp(0.0, 1.0), // Navigation is high salience
                 });
+                self.last_section_id = *section_id;
             }
 
-            InteractionEvent::HoverStart { hover_id, .. } => {
-                if *hover_id != self.last_hover_id && self.should_emit_event() {
-                    // Subtle pluck on hover
-                    let note = harmony.scale_note(self.rng.usize(..5), 4);
-                    events.push(MusicEvent::Pluck {
-                        note,
-                        velocity: 0.2,
-                        salience: 0.3, // Low salience for hover
+            InteractionEvent::HoverStart { hover_id, weight } => {
+                if *hover_id != 0 && *hover_id != self.last_hover_id {
+                    let weight = weight.unwrap_or(1.0).clamp(0.0, 1.0);
+                    let degree = match hover_id % 4 {
+                        0 => ChordDegree::I,
+                        1 => ChordDegree::IV,
+                        2 => ChordDegree::V,
+                        _ => ChordDegree::VI,
+                    };
+
+                    let notes = harmony.chord_notes(degree, 4);
+                    events.push(MusicEvent::PadChord {
+                        notes,
+                        velocity: (0.35 + weight * 0.25).clamp(0.2, 1.0),
+                        salience: (0.5 + weight * 0.3).clamp(0.0, 1.0),
                     });
                     self.last_hover_id = *hover_id;
                 }
@@ -115,6 +132,10 @@ impl EventGenerator {
             InteractionEvent::HoverEnd { .. } => {
                 // Usually silent, but could trigger subtle release
             }
+        }
+
+        if !events.is_empty() {
+            self.time_since_event = 0;
         }
 
         events
@@ -141,10 +162,10 @@ impl EventGenerator {
                 _ => ChordDegree::VI,
             };
 
-            let notes = harmony.chord_notes(degree, 3);
+            let notes = harmony.chord_notes(degree, 4);
             events.push(MusicEvent::PadChord {
                 notes,
-                velocity: 0.5,
+                velocity: 0.7,
                 salience: 0.9,
             });
             self.last_section_id = section_id;

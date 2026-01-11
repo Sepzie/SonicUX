@@ -23,6 +23,8 @@ pub struct InteractionFrame {
     pub pointer_y: f32,
     /// Pointer speed (0..1)
     pub pointer_speed: f32,
+    /// Pointer button held down
+    pub pointer_down: bool,
 
     /// Scroll Y position (0..1)
     pub scroll_y: f32,
@@ -81,6 +83,8 @@ pub struct OutputFrame {
     pub harmony: HarmonyState,
     /// Discrete musical events triggered this frame
     pub events: Vec<MusicEvent>,
+    /// Optional continuous hold output (when pointer is down)
+    pub hold: Option<HoldState>,
     /// Optional diagnostic output for debugging/visualization
     pub diagnostics: Option<DiagnosticOutput>,
 }
@@ -117,6 +121,15 @@ pub struct HarmonyState {
     pub mode: Mode,
     /// Harmonic tension level (0..1)
     pub tension: f32,
+}
+
+/// Continuous hold output for click-and-hold interactions.
+#[derive(Debug, Clone, Copy)]
+pub struct HoldState {
+    /// MIDI note number
+    pub note: u8,
+    /// Velocity (0..1)
+    pub velocity: f32,
 }
 
 impl Default for HarmonyState {
