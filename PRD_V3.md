@@ -22,6 +22,12 @@ Developers get:
 - Full control over what sounds where
 - Expandable behavior system
 
+### 1.1 Terminology
+
+- `sonic-ux`: npm package
+- `SonicUX`: factory/constructor
+- `sonic`: runtime instance returned by `SonicUX.create()`
+
 ---
 
 ## 2. Core Philosophy
@@ -66,7 +72,7 @@ sonic-ux/
 ├── HarmonyManager    // Key, mode, chord progressions, scale math
 ├── SynthEngine       // Tone.js voice management and synthesis
 ├── BehaviorSystem    // Musical behavior implementations
-└── Tracker           // DOM event listening and normalization
+└── Tracker           // Selector normalization and pointer/mouse/touch handling
 ```
 
 ### 3.2 Behavior Lifecycle
@@ -76,6 +82,13 @@ sonic-ux/
 3. Behavior converts interaction → musical intent
 4. HarmonyManager provides harmonic context
 5. SynthEngine renders audio via Tone.js
+
+### 3.3 Interaction and Selector Normalization
+
+- All element behaviors accept `string | Element | NodeList | HTMLElement[]`
+- Tracker normalizes inputs into a stable element list
+- Pointer Events are used when available, with Mouse/Touch fallbacks
+- Hover-based behaviors automatically disable on touch-only devices
 
 ---
 
@@ -125,6 +138,9 @@ sonic.drone.sections([
 ---
 
 ### 4.2 Element Behaviors
+
+All element behaviors accept `string | Element | NodeList | HTMLElement[]` and are normalized by the Tracker.
+Hover-based behaviors are ignored on touch-only devices.
 
 #### `sonic.pluck(selector, options)`
 
@@ -237,6 +253,10 @@ const sonic = await SonicUX.create({
 });
 ```
 
+Notes:
+- `SonicUX.create()` initializes the audio graph but does not start audio output.
+- First user interaction should trigger `Tone.start()` internally or via `sonic.unlock()`.
+
 ### 5.2 Harmonic Control
 
 ```typescript
@@ -251,6 +271,11 @@ sonic.setScale([0, 2, 4, 5, 7, 9, 11]); // Major scale intervals
 
 // Chord pool for progressions
 sonic.setChordPool(['I', 'IV', 'V', 'vi']);
+
+// Manual harmony control (advanced)
+sonic.lockHarmony();
+sonic.setChord(['C4', 'E4', 'G4']);
+sonic.unlockHarmony();
 ```
 
 ### 5.3 Global Controls
@@ -260,6 +285,9 @@ sonic.setChordPool(['I', 'IV', 'V', 'vi']);
 sonic.setVolume(-15);          // Master volume (dB)
 sonic.mute();                  // Fade out all voices
 sonic.unmute();                // Fade in
+
+// Audio lifecycle (required on mobile)
+sonic.unlock();                // Start audio context after user gesture
 
 // Enable/disable
 sonic.enable();
@@ -277,6 +305,15 @@ sonic.setPreset('ambient');    // ambient | playful | dramatic | glitchy
 
 // List available presets
 SonicUX.presets();             // ['ambient', 'playful', 'dramatic', ...]
+```
+
+### 5.5 Accessibility Controls
+
+```typescript
+sonic.setAccessibility({
+  reducedMotion: 'auto', // auto | force | off
+  allowSound: true,      // explicit user toggle
+});
 ```
 
 ---
@@ -305,6 +342,17 @@ Chords are specified by Roman numeral degree:
 - `I`, `ii`, `iii`, `IV`, `V`, `vi`, `vii°`
 - Automatically voiced from current scale
 - Smart voice leading between changes
+
+### 6.4 Manual Harmony (Escape Hatch)
+
+For advanced cases, developers can lock harmony and provide explicit chords.
+When locked, automatic progression pauses and behaviors use the supplied chord.
+
+```typescript
+sonic.lockHarmony();
+sonic.setChord(['C4', 'E4', 'G4']);
+sonic.unlockHarmony();
+```
 
 ---
 
@@ -365,11 +413,52 @@ Automatically mute when:
 - Smooth ramps (no zipper noise)
 - Conservative defaults
 
+### 8.4 Explicit User Controls
+
+- Auto-detection is the default, but users can override via `sonic.setAccessibility(...)`
+- `sonic.enable()` and `sonic.disable()` provide a clear on/off toggle for compliance
+
 ---
 
-## 9. Developer Experience
+## 9. Mobile Web Strategy
 
-### 9.1 TypeScript First
+### 9.1 What Works Well on Mobile
+
+- Tap-triggered plucks and accents
+- Scroll-driven harmonic changes (sections)
+- Sustained drones and chord pads with low polyphony
+
+### 9.2 Required Behavioral Adaptations
+
+- No hover; replace with tap-to-toggle or press-and-hold
+- Continuous XY control becomes optional and simplified
+- Avoid interference with scrolling gestures
+
+### 9.3 Audio Lifecycle Constraints
+
+- Audio must be user-initiated on iOS and Android
+- `SonicUX.create()` must not start audio
+- First interaction should call `Tone.start()` internally or via `sonic.unlock()`
+
+### 9.4 Performance and Battery Defaults
+
+- Lower polyphony (4-8 voices)
+- Reduced or disabled reverb
+- Fewer drone voices
+- Auto-mute on tab blur or backgrounding
+
+### 9.5 Recommended Mobile Architecture
+
+1. Automatic mobile detection (coarse pointer, touch)
+2. Explicit audio unlock flow (`sonic.unlock()`)
+3. Mobile-safe behavior variants: `tapSound`, `holdPad`, `togglePad`
+4. Mobile preset pack optimized for CPU and battery
+
+---
+
+## 10. Developer Experience
+
+### 10.1 TypeScript First
 
 Full type definitions for:
 - All API methods
@@ -377,19 +466,22 @@ Full type definitions for:
 - Event callbacks
 - Return values
 
-### 9.2 Debug Mode
+### 10.2 Debug Mode
+
+Debug mode is a first-class adoption feature and should be safe to ship in dev-only builds.
 
 ```typescript
 sonic.debug(true);
 ```
 
 Enables:
-- Visual overlay showing active behaviors
+- Visual overlay showing active behaviors (DOM overlay, optional canvas for charts)
 - Console logging of musical events
 - Performance metrics
 - Harmonic state display
+- Tree-shakeable in production when debug is not enabled
 
-### 9.3 Event Hooks
+### 10.3 Event Hooks
 
 ```typescript
 sonic.on('notePlay', (note, velocity) => {
@@ -407,9 +499,13 @@ sonic.on('sectionChange', (section) => {
 
 ---
 
-## 10. Advanced Features (Future)
+## 11. Advanced Features (Future)
 
-### 10.1 Custom Behaviors
+### 11.1 Custom Behaviors
+
+Custom behaviors return musical intent, not audio output. The engine owns scheduling,
+voice allocation, and rendering. Supported return shapes include a single note object,
+an array of note objects, or a `{ notes: [...] }` bundle with shared options.
 
 ```typescript
 import { createBehavior } from 'sonic-ux';
@@ -422,7 +518,7 @@ const myBehavior = createBehavior({
   },
 
   onInteraction(event, harmony) {
-    // Return notes to play
+    // Return musical intent for the engine to schedule
     return { note: 60, velocity: 0.8 };
   },
 
@@ -435,7 +531,7 @@ sonic.register(myBehavior);
 sonic.wobble('.special');
 ```
 
-### 10.2 Custom Synths
+### 11.2 Custom Synths
 
 ```typescript
 import * as Tone from 'tone';
@@ -449,7 +545,7 @@ sonic.registerVoice('custom', {
 });
 ```
 
-### 10.3 Interaction Recording
+### 11.3 Interaction Recording
 
 ```typescript
 // Record user interactions
@@ -464,7 +560,7 @@ const json = recording.export();
 
 ---
 
-## 11. Package Structure
+## 12. Package Structure
 
 ```
 sonic-ux/
@@ -500,7 +596,7 @@ sonic-ux/
 
 ---
 
-## 12. Release Strategy
+## 13. Release Strategy
 
 ### v0.1 - MVP (Core Behaviors)
 - Initialization API
@@ -528,35 +624,38 @@ sonic-ux/
 
 ---
 
-## 13. Success Criteria
+## 14. Success Criteria
 
 1. **Time to First Sound**: Developer can have working musical UX in < 5 minutes
 2. **Sounds Good**: Zero-config produces pleasant, non-annoying audio
 3. **Feels Intuitive**: API is self-explanatory from autocomplete
-4. **Performs Well**: No jank on 60fps scroll/interaction
+4. **Performs Well**: Target no jank at 60fps during scroll/interaction
 5. **Real-world Use**: Deployed in at least 3 production websites (starting with your portfolio)
 
 ---
 
-## 14. Technical Constraints
+## 15. Technical Constraints
 
 - **Browser**: Modern evergreen (ES2020+)
 - **Dependencies**: Tone.js (only required dependency)
-- **Bundle size**: Target < 50KB gzipped
-- **Performance**: < 5ms per interaction frame
+- **Bundle size**: Target < 50KB gzipped with tree-shaking
+- **Performance**: Target < 5ms per interaction frame
 - **Memory**: Graceful degradation beyond polyphony limit
+- **Targets**: Performance and size are goals, not guarantees, and depend on host app and browser
 
 ---
 
-## 15. Non-Goals (Out of Scope)
+## 16. Non-Goals (Out of Scope)
 
 - Mobile app support (Web Audio only)
 - Server-side rendering
 - Audio recording/export
 - MIDI controller support
-- Complex sequencing/DAW features
+- Notification or alert sounds
+- Gamified reward loops
+- Audio-first applications or DAW-style workflows
 - Non-realtime audio processing
 
 ---
 
-*Document version: 3.0 — Complete reboot focused on modular behaviors and developer experience*
+*Document version: 3.1 - Updated with mobile strategy, terminology, and advanced control clarifications*
