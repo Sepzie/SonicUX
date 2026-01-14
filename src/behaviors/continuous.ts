@@ -68,11 +68,12 @@ export class ContinuousBehavior {
         // Start the note
         monoSynth.triggerAttack(frequency, Tone.now(), 0.7);
 
+        // Store the synth before applying controls to ensure it can be released
+        this.activeSynths.set(element, { synth: monoSynth, voiceId: '' });
+
         // Apply Y-axis control
         this.applyYAxisControl(monoSynth, event, element, yAxis);
 
-        // Store the synth
-        this.activeSynths.set(element, { synth: monoSynth, voiceId: '' });
       },
 
       onMove: (event, element) => {
@@ -126,7 +127,8 @@ export class ContinuousBehavior {
   private calculateNoteFromPosition(x: number, octave: number): number {
     // Map X position to scale degree
     const scale = this.harmony.getCurrentScale();
-    const scaleDegree = Math.floor(x * scale.length * 2); // Span 2 octaves
+    const clampedX = Math.min(Math.max(x, 0), 1);
+    const scaleDegree = Math.floor(clampedX * scale.length * 2); // Span 2 octaves
     return this.harmony.getScaleNote(scaleDegree, octave);
   }
 
@@ -137,7 +139,13 @@ export class ContinuousBehavior {
     yAxis: 'waveform' | 'filter'
   ): void {
     const rect = element.getBoundingClientRect();
-    const y = 1 - ((event.clientY - rect.top) / rect.height); // Invert Y (bottom = 0, top = 1)
+    if (rect.height <= 0) {
+      return;
+    }
+
+    const rawY = (event.clientY - rect.top) / rect.height;
+    const clampedY = Math.min(Math.max(rawY, 0), 1);
+    const y = 1 - clampedY; // Invert Y (bottom = 0, top = 1)
 
     if (yAxis === 'filter') {
       // Map Y to filter frequency (200Hz - 4000Hz)

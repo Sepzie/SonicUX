@@ -60,9 +60,11 @@ export class HarmonyManager {
       key,
       mode,
       scale: modeDefinition.intervals,
-      chord: this.buildChord('I', 4),
+      chord: [],
       isLocked: false
     };
+
+    this.state.chord = this.buildChord('I', 4);
   }
 
   // ============================================================================
