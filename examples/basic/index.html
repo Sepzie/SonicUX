@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>sonic-ux Basic Example</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      min-height: 100vh;
+    }
+
+    section {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+
+    h1 {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+
+    h2 {
+      font-size: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    p {
+      font-size: 1.2rem;
+      max-width: 600px;
+      text-align: center;
+      line-height: 1.6;
+      opacity: 0.9;
+    }
+
+    /* Hero section */
+    #hero {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    /* Pluck demo */
+    #pluck-demo {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    .button-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 20px;
+      max-width: 600px;
+      width: 100%;
+      margin-top: 2rem;
+    }
+
+    .pluck-btn {
+      padding: 20px 30px;
+      font-size: 1.2rem;
+      background: rgba(255, 255, 255, 0.2);
+      border: 2px solid rgba(255, 255, 255, 0.4);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: white;
+      font-weight: 600;
+    }
+
+    .pluck-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: translateY(-2px);
+    }
+
+    .pluck-btn:active {
+      transform: translateY(0);
+    }
+
+    /* Continuous demo */
+    #continuous-demo {
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+
+    .interactive-area {
+      width: 80%;
+      max-width: 600px;
+      height: 300px;
+      background: rgba(255, 255, 255, 0.2);
+      border: 3px dashed rgba(255, 255, 255, 0.5);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: crosshair;
+      margin-top: 2rem;
+      user-select: none;
+    }
+
+    .interactive-area p {
+      opacity: 0.7;
+      font-size: 1rem;
+    }
+
+    /* Arpeggio demo */
+    #arpeggio-demo {
+      background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    }
+
+    .draggable-container {
+      display: flex;
+      gap: 30px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 2rem;
+    }
+
+    .draggable {
+      width: 100px;
+      height: 100px;
+      background: rgba(255, 255, 255, 0.3);
+      border: 2px solid rgba(255, 255, 255, 0.5);
+      border-radius: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      transition: all 0.2s;
+    }
+
+    .draggable:hover {
+      transform: scale(1.05);
+      background: rgba(255, 255, 255, 0.4);
+    }
+
+    /* Hover demo */
+    #hover-demo {
+      background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
+    }
+
+    .menu {
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 2rem;
+    }
+
+    .menu-item {
+      padding: 15px 30px;
+      background: rgba(255, 255, 255, 0.2);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 1.1rem;
+    }
+
+    .menu-item:hover {
+      background: rgba(255, 255, 255, 0.4);
+      border-color: rgba(255, 255, 255, 0.6);
+    }
+
+    /* Chord pad demo */
+    #chord-demo {
+      background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+    }
+
+    .card-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      max-width: 800px;
+      width: 100%;
+      margin-top: 2rem;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.3);
+      border: 2px solid rgba(255, 255, 255, 0.4);
+      border-radius: 16px;
+      padding: 30px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .card:hover {
+      background: rgba(255, 255, 255, 0.5);
+      transform: translateY(-5px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    .card h3 {
+      margin-bottom: 10px;
+      font-size: 1.5rem;
+    }
+
+    /* Controls */
+    #controls {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .control-panel {
+      background: rgba(255, 255, 255, 0.2);
+      padding: 30px;
+      border-radius: 16px;
+      max-width: 500px;
+      width: 100%;
+      margin-top: 2rem;
+    }
+
+    .control-group {
+      margin-bottom: 20px;
+    }
+
+    .control-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    .control-group select,
+    .control-group button {
+      width: 100%;
+      padding: 12px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background: rgba(255, 255, 255, 0.9);
+      color: #333;
+    }
+
+    .control-group button {
+      background: rgba(255, 255, 255, 0.3);
+      color: white;
+      border: 2px solid rgba(255, 255, 255, 0.5);
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .control-group button:hover {
+      background: rgba(255, 255, 255, 0.4);
+    }
+
+    /* Unlock prompt */
+    #unlock-prompt {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.95);
+      padding: 40px;
+      border-radius: 16px;
+      text-align: center;
+      z-index: 9999;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    #unlock-prompt button {
+      margin-top: 20px;
+      padding: 15px 40px;
+      font-size: 1.2rem;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    #unlock-prompt button:hover {
+      background: #764ba2;
+      transform: scale(1.05);
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <!-- Audio unlock prompt -->
+  <div id="unlock-prompt">
+    <h2>🎵 Welcome to sonic-ux</h2>
+    <p>Click to enable audio and begin the musical journey</p>
+    <button id="unlock-btn">Enable Audio</button>
+  </div>
+
+  <!-- Hero section -->
+  <section id="hero">
+    <h1>🎵 sonic-ux</h1>
+    <p>
+      A toolkit of musical behaviors that makes any website sing.
+      Scroll down to explore different interaction patterns.
+    </p>
+  </section>
+
+  <!-- Pluck demo -->
+  <section id="pluck-demo">
+    <h2>Click & Pluck</h2>
+    <p>Click these buttons to trigger melodic notes</p>
+    <div class="button-grid">
+      <button class="pluck-btn">Button 1</button>
+      <button class="pluck-btn">Button 2</button>
+      <button class="pluck-btn">Button 3</button>
+      <button class="pluck-btn">Button 4</button>
+      <button class="pluck-btn">Button 5</button>
+      <button class="pluck-btn">Button 6</button>
+    </div>
+  </section>
+
+  <!-- Continuous demo -->
+  <section id="continuous-demo">
+    <h2>Continuous Control</h2>
+    <p>Click and drag inside the area - X controls pitch, Y controls filter</p>
+    <div class="interactive-area">
+      <p>Click and drag here</p>
+    </div>
+  </section>
+
+  <!-- Arpeggio demo -->
+  <section id="arpeggio-demo">
+    <h2>Arpeggio Patterns</h2>
+    <p>Click and hold these elements to play arpeggiated sequences</p>
+    <div class="draggable-container">
+      <div class="draggable">🎹</div>
+      <div class="draggable">🎸</div>
+      <div class="draggable">🎺</div>
+      <div class="draggable">🎻</div>
+    </div>
+  </section>
+
+  <!-- Hover demo -->
+  <section id="hover-demo">
+    <h2>Hover Sounds</h2>
+    <p>Hover over these menu items to hear enter/exit sounds</p>
+    <div class="menu">
+      <div class="menu-item">Home</div>
+      <div class="menu-item">About</div>
+      <div class="menu-item">Work</div>
+      <div class="menu-item">Contact</div>
+    </div>
+  </section>
+
+  <!-- Chord pad demo -->
+  <section id="chord-demo">
+    <h2>Chord Pads</h2>
+    <p>Hover over these cards to hear sustained chords</p>
+    <div class="card-container">
+      <div class="card">
+        <h3>Card 1</h3>
+        <p>Hover me</p>
+      </div>
+      <div class="card">
+        <h3>Card 2</h3>
+        <p>Hover me</p>
+      </div>
+      <div class="card">
+        <h3>Card 3</h3>
+        <p>Hover me</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Controls -->
+  <section id="controls">
+    <h2>Controls</h2>
+    <p>Adjust the musical parameters</p>
+    <div class="control-panel">
+      <div class="control-group">
+        <label for="key-select">Musical Key</label>
+        <select id="key-select">
+          <option value="C">C Minor</option>
+          <option value="D">D Minor</option>
+          <option value="E">E Minor</option>
+          <option value="F">F Minor</option>
+          <option value="G">G Minor</option>
+          <option value="A">A Minor</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label for="preset-select">Preset</label>
+        <select id="preset-select">
+          <option value="ambient">Ambient</option>
+          <option value="playful">Playful</option>
+          <option value="dramatic">Dramatic</option>
+          <option value="glitchy">Glitchy</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <button id="debug-toggle">Toggle Debug Mode</button>
+      </div>
+    </div>
+  </section>
+
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>
